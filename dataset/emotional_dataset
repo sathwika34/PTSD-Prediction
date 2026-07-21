@@ -1,4 +1,4 @@
-#use this in colab for importing the  emotional dataset
+
 from datasets import load_dataset
 
 emotion_ds = load_dataset('dair-ai/emotion')
