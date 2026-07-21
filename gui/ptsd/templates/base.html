@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="PTSD Early Risk Detection System — An Explainable ML Framework for Clinical Screening">
+    <title>{% block title %}PTSD Risk Detection{% endblock %} — Clinical Precision Framework</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    
+    <!-- App CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    
+    {% block head_extra %}{% endblock %}
+</head>
+<body>
+    <!-- Mobile Menu Toggle -->
+    <button class="mobile-menu-toggle" onclick="toggleSidebar()" aria-label="Toggle menu">
+        <span class="material-icons">menu</span>
+    </button>
+
+    <div class="app-layout">
+        <!-- ═══ Sidebar Navigation ═══ -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <div class="sidebar-brand-icon">🧠</div>
+                <h2>PTSD Risk Detection</h2>
+                <span>Clinical Precision Framework</span>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}" id="nav-home">
+                    <span class="material-icons">dashboard</span>
+                    Home
+                </a>
+                <a href="/assessment" class="nav-link {% if request.path == '/assessment' %}active{% endif %}" id="nav-assessment">
+                    <span class="material-icons">analytics</span>
+                    Assessment
+                </a>
+                <a href="/explainability" class="nav-link {% if request.path == '/explainability' %}active{% endif %}" id="nav-explainability">
+                    <span class="material-icons">visibility</span>
+                    Explainability
+                </a>
+                <a href="/analytics" class="nav-link {% if request.path == '/analytics' %}active{% endif %}" id="nav-analytics">
+                    <span class="material-icons">insights</span>
+                    Analytics
+                </a>
+                <a href="/performance" class="nav-link {% if request.path == '/performance' %}active{% endif %}" id="nav-performance">
+                    <span class="material-icons">speed</span>
+                    Performance
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                v1.0 — Research Use Only
+            </div>
+        </aside>
+
+        <!-- ═══ Main Content ═══ -->
+        <main class="main-content">
+            <!-- Subtle BG Pattern -->
+            <div class="bg-pattern"></div>
+            
+
+
+            {% if not loaded %}
+            <div style="padding: 24px 40px 0;">
+                <div class="no-model-warning">
+                    <span class="material-icons">info</span>
+                    <div>
+                        <h3>Model Not Loaded</h3>
+                        <p>Run <code>python train_model.py</code> first, then restart the Flask app to enable predictions.</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% block content %}{% endblock %}
+
+            <!-- Footer -->
+            <footer class="app-footer">
+                <span>© 2026 Clinical Precision Framework. Medical Screening Tool Disclaimer: Not for diagnostic use.</span>
+                <div class="footer-links">
+                    <a href="#">Privacy Policy</a>
+                    <a href="#">Clinical Guidelines</a>
+                    <a href="#">Terms of Service</a>
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <!-- App JS -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block scripts %}{% endblock %}
+
+    <script>
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+        // Close sidebar on outside click (mobile)
+        document.addEventListener('click', function(e) {
+            const sidebar = document.getElementById('sidebar');
+            const toggle = document.querySelector('.mobile-menu-toggle');
+            if (window.innerWidth <= 768 && sidebar.classList.contains('open') 
+                && !sidebar.contains(e.target) && !toggle.contains(e.target)) {
+                sidebar.classList.remove('open');
+            }
+        });
+    </script>
+</body>
+</html>

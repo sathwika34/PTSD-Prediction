@@ -1,0 +1,372 @@
+{% extends "base.html" %}
+{% block title %}Risk Assessment{% endblock %}
+
+{% block content %}
+<div class="page-body">
+    <!-- ═══ Page Header ═══ -->
+    <div class="page-header animate-in">
+        <h1>
+            <span class="material-icons">assignment</span>
+            Patient Risk Assessment
+        </h1>
+        <p>Complete the clinical assessment below. All 28 features across 5 domains are analyzed by the AI model for accurate PTSD risk prediction.</p>
+    </div>
+
+    <!-- ═══ Assessment Form ═══ -->
+    <form id="assessment-form" class="assessment-form">
+        {% for section_key, section in feature_config.items() %}
+        <div class="form-section animate-in delay-{{ loop.index }}">
+            <div class="form-section-header" onclick="toggleSection(this)">
+                <div class="form-section-title">
+                    <span class="material-icons">{{ section.icon }}</span>
+                    {{ section.title }}
+                    <span class="field-count">{{ section.fields | length }} fields</span>
+                </div>
+                <span class="material-icons section-toggle">expand_more</span>
+            </div>
+            <div class="form-section-body open">
+                <div class="form-grid">
+                    {% for field in section.fields %}
+                    <div class="form-field">
+                        <label for="field-{{ field.name | replace(' ', '_') | replace('(', '') | replace(')', '') }}">{{ field.label }}</label>
+                        
+                        {% if field.type == 'select' %}
+                        <select 
+                            name="{{ field.name }}" 
+                            id="field-{{ field.name | replace(' ', '_') | replace('(', '') | replace(')', '') }}"
+                            required>
+                            <option value="" disabled selected>Select...</option>
+                            {% for opt in field.options %}
+                            <option value="{{ opt }}">{{ opt }}</option>
+                            {% endfor %}
+                        </select>
+                        
+                        {% elif field.type == 'range' %}
+                        <div class="range-wrapper">
+                            <input type="range" 
+                                name="{{ field.name }}" 
+                                id="field-{{ field.name | replace(' ', '_') | replace('(', '') | replace(')', '') }}"
+                                min="{{ field.min }}" 
+                                max="{{ field.max }}" 
+                                step="{{ field.step | default(1) }}"
+                                value="{{ field.default | default(field.min) }}"
+                                oninput="updateRangeDisplay(this)">
+                            <div class="range-labels">
+                                <span>{{ field.min }}</span>
+                                <span class="range-value" id="val-{{ field.name | replace(' ', '_') | replace('(', '') | replace(')', '') }}">{{ field.default | default(field.min) }}</span>
+                                <span>{{ field.max }}</span>
+                            </div>
+                        </div>
+                        
+                        {% elif field.type == 'number' %}
+                        <input type="number" 
+                            name="{{ field.name }}" 
+                            id="field-{{ field.name | replace(' ', '_') | replace('(', '') | replace(')', '') }}"
+                            min="{{ field.min }}" 
+                            max="{{ field.max }}" 
+                            value="{{ field.default | default('') }}"
+                            placeholder="{{ field.placeholder | default('') }}"
+                            onfocus="this.select()"
+                            required>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- Submit Button -->
+        <div class="form-actions animate-in delay-6">
+            <button type="submit" class="btn btn-primary btn-lg" id="predict-btn">
+                <span class="material-icons">analytics</span>
+                Calculate Risk Score
+            </button>
+            <button type="reset" class="btn btn-secondary" onclick="resetForm()">
+                <span class="material-icons">restart_alt</span>
+                Reset Form
+            </button>
+        </div>
+    </form>
+
+    <!-- ═══ Result Modal ═══ -->
+    <div class="modal-overlay" id="result-modal" style="display:none;">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">
+                <span class="material-icons">close</span>
+            </button>
+            
+            <h2>Risk Assessment Result</h2>
+            
+            <!-- Risk Gauge -->
+            <div class="risk-gauge-container">
+                <div class="risk-gauge" id="risk-gauge">
+                    <svg viewBox="0 0 200 200" class="gauge-svg">
+                        <circle cx="100" cy="100" r="85" fill="none" stroke="#e0e0e0" stroke-width="12"/>
+                        <circle cx="100" cy="100" r="85" fill="none" stroke="#4caf50" stroke-width="12"
+                                stroke-dasharray="534" stroke-dashoffset="534" stroke-linecap="round"
+                                transform="rotate(-90 100 100)" id="gauge-arc"/>
+                    </svg>
+                    <div class="gauge-text">
+                        <span class="gauge-value" id="gauge-value">0%</span>
+                        <span class="gauge-label">RISK SCORE</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Risk Level Badge -->
+            <div class="risk-badge" id="risk-badge">
+                <span class="material-icons" id="risk-icon">check_circle</span>
+                <span id="risk-level-text">LOW RISK</span>
+            </div>
+
+            <!-- Advice -->
+            <p class="risk-advice" id="risk-advice"></p>
+
+            <!-- Key Input Summary -->
+            <div class="input-summary" id="input-summary">
+                <h4>
+                    <span class="material-icons">summarize</span>
+                    Key Input Summary
+                </h4>
+                <div class="summary-grid" id="summary-grid"></div>
+            </div>
+
+            <!-- Feature Impact -->
+            <div class="shap-section" id="shap-section">
+                <h4>
+                    <span class="material-icons">insights</span>
+                    Feature Impact Analysis
+                </h4>
+                <p class="shap-subtitle">Red bars push prediction toward PTSD risk. Green bars are protective factors.</p>
+                <div class="shap-bars" id="shap-bars"></div>
+            </div>
+
+            <!-- ═══ Precautions & Suggestions ═══ -->
+            <div class="precautions-section" id="precautions-section">
+                <div class="precautions-header">
+                    <h4>
+                        <span class="material-icons">health_and_safety</span>
+                        Precautions & Suggestions to Reduce Risk
+                    </h4>
+                    <p class="precautions-subtitle">Personalized recommendations based on your risk level. Consult a professional before making major changes.</p>
+                </div>
+                <div class="precautions-grid" id="precautions-grid"></div>
+            </div>
+
+
+        </div>
+    </div>
+</div>
+
+<script>
+// ─── Form Section Toggle ──────────────────────────────────────────────
+function toggleSection(header) {
+    const body = header.nextElementSibling;
+    const icon = header.querySelector('.section-toggle');
+    body.classList.toggle('open');
+    icon.style.transform = body.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0)';
+}
+
+// ─── Range Slider Display ─────────────────────────────────────────────
+function updateRangeDisplay(input) {
+    const name = input.name.replace(/ /g, '_').replace(/\(/g, '').replace(/\)/g, '');
+    const display = document.getElementById('val-' + name);
+    if (display) display.textContent = input.value;
+}
+
+// ─── Reset Form ───────────────────────────────────────────────────────
+function resetForm() {
+    setTimeout(() => {
+        document.querySelectorAll('input[type=range]').forEach(r => {
+            updateRangeDisplay(r);
+        });
+    }, 50);
+}
+
+// ─── Initialize range displays on page load ──────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('input[type=range]').forEach(r => {
+        updateRangeDisplay(r);
+    });
+});
+
+// ─── Form Submission ──────────────────────────────────────────────────
+document.getElementById('assessment-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const btn = document.getElementById('predict-btn');
+    btn.innerHTML = '<span class="material-icons spin">hourglass_top</span> Analyzing...';
+    btn.disabled = true;
+
+    const formData = new FormData(this);
+    const payload = {};
+    
+    for (let [key, value] of formData.entries()) {
+        payload[key] = value;
+    }
+    
+    // Sync the duplicate Age and Gender fields (model has both lowercase and capitalized)
+    payload['Age'] = parseFloat(payload['age']);
+    payload['Gender'] = payload['gender'];
+
+    try {
+        const response = await fetch('/api/predict', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        
+        if (result.error) {
+            alert('Prediction Error: ' + result.error);
+            return;
+        }
+
+        showResult(result);
+    } catch (err) {
+        alert('Connection error: ' + err.message);
+    } finally {
+        btn.innerHTML = '<span class="material-icons">analytics</span> Calculate Risk Score';
+        btn.disabled = false;
+    }
+});
+
+// ─── Show Result Modal ────────────────────────────────────────────────
+function showResult(result) {
+    const modal = document.getElementById('result-modal');
+    const pct = result.probability_pct || (result.probability * 100);
+    
+    // Update gauge
+    const arc = document.getElementById('gauge-arc');
+    const circumference = 2 * Math.PI * 85;
+    const offset = circumference - (pct / 100) * circumference;
+    arc.style.strokeDashoffset = offset;
+    arc.style.stroke = result.risk_color;
+    
+    document.getElementById('gauge-value').textContent = pct.toFixed(1) + '%';
+    
+    // Risk badge
+    const badge = document.getElementById('risk-badge');
+    badge.style.backgroundColor = result.risk_color + '20';
+    badge.style.color = result.risk_color;
+    badge.style.borderColor = result.risk_color + '40';
+    
+    const iconMap = { 'LOW': 'check_circle', 'MODERATE': 'warning', 'HIGH': 'error' };
+    document.getElementById('risk-icon').textContent = iconMap[result.risk_level] || 'info';
+    document.getElementById('risk-level-text').textContent = result.risk_level + ' RISK';
+    
+    // Advice
+    document.getElementById('risk-advice').textContent = result.advice || '';
+    
+    // Input summary
+    const summary = result.input_summary || {};
+    const summaryGrid = document.getElementById('summary-grid');
+    summaryGrid.innerHTML = '';
+    const summaryItems = [
+        { label: 'Stress Level', value: summary.stress, icon: 'psychology' },
+        { label: 'Happiness', value: summary.happiness, icon: 'sentiment_satisfied' },
+        { label: 'Sleep Issues', value: summary.sleep_disturbance, icon: 'bedtime' },
+        { label: 'Fear Level', value: summary.fear, icon: 'warning' },
+        { label: 'Sadness', value: summary.sadness, icon: 'mood_bad' },
+    ];
+    summaryItems.forEach(item => {
+        if (item.value !== undefined) {
+            const div = document.createElement('div');
+            div.className = 'summary-item';
+            div.innerHTML = `
+                <span class="material-icons">${item.icon}</span>
+                <span class="summary-label">${item.label}</span>
+                <span class="summary-value">${item.value}</span>
+            `;
+            summaryGrid.appendChild(div);
+        }
+    });
+    
+    // Feature impact bars
+    const barsContainer = document.getElementById('shap-bars');
+    barsContainer.innerHTML = '';
+    
+    if (result.explanations && result.explanations.length > 0) {
+        const maxImpact = Math.max(...result.explanations.map(e => e.abs_impact), 0.01);
+        
+        result.explanations.forEach(exp => {
+            if (exp.abs_impact < 0.01) return;
+            
+            const barDiv = document.createElement('div');
+            barDiv.className = 'shap-bar-row';
+            const width = Math.min((exp.abs_impact / maxImpact) * 100, 100);
+            const color = exp.direction === 'risk' ? '#c62828' : 
+                          exp.direction === 'protective' ? '#2e7d32' : '#78909c';
+            
+            barDiv.innerHTML = `
+                <span class="shap-feature">${exp.feature}</span>
+                <div class="shap-bar-track">
+                    <div class="shap-bar-fill" style="width:${width}%;background:${color};"></div>
+                </div>
+                <span class="shap-value" style="color:${color}">${exp.shap_value > 0 ? '+' : ''}${exp.shap_value.toFixed(3)}</span>
+            `;
+            barsContainer.appendChild(barDiv);
+        });
+    }
+
+    // ─── Precautions & Suggestions ────────────────────────────────────
+    const precautionsGrid = document.getElementById('precautions-grid');
+    precautionsGrid.innerHTML = '';
+
+    if (result.precautions && result.precautions.length > 0) {
+        document.getElementById('precautions-section').style.display = 'block';
+
+        result.precautions.forEach((cat, idx) => {
+            const card = document.createElement('div');
+            card.className = `precaution-card priority-${cat.priority}`;
+            card.style.animationDelay = `${idx * 0.08}s`;
+
+            const priorityLabels = {
+                'critical': '🔴 Critical',
+                'important': '🟠 Important',
+                'recommended': '🟢 Recommended',
+                'helpful': '🔵 Helpful'
+            };
+
+            const suggestionsHTML = cat.suggestions.map(s => 
+                `<li><span class="material-icons suggestion-check">check_circle</span>${s}</li>`
+            ).join('');
+
+            card.innerHTML = `
+                <div class="precaution-card-header">
+                    <div class="precaution-icon-wrap">
+                        <span class="material-icons">${cat.icon}</span>
+                    </div>
+                    <div class="precaution-title-wrap">
+                        <h5>${cat.category}</h5>
+                        <span class="priority-badge priority-${cat.priority}">${priorityLabels[cat.priority] || cat.priority}</span>
+                    </div>
+                </div>
+                <ul class="suggestion-list">${suggestionsHTML}</ul>
+            `;
+            precautionsGrid.appendChild(card);
+        });
+    } else {
+        document.getElementById('precautions-section').style.display = 'none';
+    }
+    
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    // Scroll modal to top
+    document.querySelector('.modal-content').scrollTop = 0;
+}
+
+// ─── Close Modal ──────────────────────────────────────────────────────
+function closeModal() {
+    document.getElementById('result-modal').style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+document.getElementById('result-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+});
+</script>
+{% endblock %}

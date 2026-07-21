@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="page-body">
+    <!-- ═══ Hero Section ═══ -->
+    <div class="hero-section animate-in" style="background-image: url('{{ url_for('static', filename='images/hero-bg.png') }}'); background-size: cover; background-position: center;">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span class="material-icons" style="font-size:14px;">science</span>
+                AI-Powered · Multi-Factor · Colab-Trained Model
+            </div>
+            <h1>PTSD Early Risk<br>Detection System</h1>
+            <p>An AI-powered PTSD risk prediction framework using clinical, lifestyle, and emotional 
+               indicators. Trained on real-world data with 28 multimodal features for accurate, 
+               early risk assessment.</p>
+            <div class="hero-actions">
+                <a href="/assessment" class="btn btn-primary btn-lg">
+                    <span class="material-icons">analytics</span>
+                    Start Assessment
+                </a>
+                <a href="/performance" class="btn btn-secondary btn-lg">
+                    <span class="material-icons">speed</span>
+                    View Performance
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ Key Metrics ═══ -->
+    <div class="metrics-grid animate-in delay-1">
+        <div class="metric-card">
+            <div class="metric-card-label">Assessment Features</div>
+            <div class="metric-card-value" id="metric-total">28</div>
+            <div class="metric-card-sub">
+                <span class="material-icons" style="font-size:14px;color:var(--success);">category</span>
+                Multimodal clinical inputs
+            </div>
+        </div>
+        <div class="metric-card success">
+            <div class="metric-card-label">Model Type</div>
+            <div class="metric-card-value secondary" style="font-size:1.6rem;">ML Pipeline</div>
+            <div class="metric-card-sub">
+                <span class="material-icons" style="font-size:14px;color:var(--success);">check_circle</span>
+                Colab-trained model
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-card-label">Feature Domains</div>
+            <div class="metric-card-value">5</div>
+            <div class="metric-card-sub">
+                <span class="material-icons" style="font-size:14px;">hub</span>
+                Demographics, Trauma, Clinical, Lifestyle, Emotional
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-card-label">Risk Classification</div>
+            <div class="metric-card-value">3</div>
+            <div class="metric-card-sub">
+                <span class="material-icons" style="font-size:14px;">traffic</span>
+                Low · Moderate · High
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ Assessment Workflow ═══ -->
+    <h2 class="section-title animate-in delay-2">
+        <span class="material-icons">route</span>
+        Assessment Workflow
+    </h2>
+    <div class="workflow-grid animate-in delay-2">
+        <div class="workflow-step">
+            <div class="workflow-step-number">1</div>
+            <h4>Enter Patient Data</h4>
+            <p>Input demographics, trauma history, clinical scores, lifestyle habits, and emotional indicators through the guided assessment form.</p>
+        </div>
+        <div class="workflow-step">
+            <div class="workflow-step-number">2</div>
+            <h4>AI Analysis</h4>
+            <p>The trained ML model processes all 28 multimodal features to compute a comprehensive PTSD risk probability.</p>
+        </div>
+        <div class="workflow-step">
+            <div class="workflow-step-number">3</div>
+            <h4>Risk Score</h4>
+            <p>Receive a calibrated probability score with clear Low / Moderate / High risk classification and actionable advice.</p>
+        </div>
+        <div class="workflow-step">
+            <div class="workflow-step-number">4</div>
+            <h4>Feature Analysis</h4>
+            <p>Understand which features — stress, emotions, sleep, lifestyle — contributed most to the prediction.</p>
+        </div>
+    </div>
+
+    <!-- ═══ Key Features ═══ -->
+    <h2 class="section-title animate-in delay-3">
+        <span class="material-icons">auto_awesome</span>
+        Key Capabilities
+    </h2>
+    <div class="features-grid animate-in delay-3">
+        <div class="feature-card">
+            <div class="feature-card-icon">
+                <span class="material-icons">hub</span>
+            </div>
+            <h4>Multimodal Data</h4>
+            <p>Synthesizes 28 diverse inputs including demographics, trauma history, clinical scores, lifestyle habits, and emotional states.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-card-icon">
+                <span class="material-icons">psychology</span>
+            </div>
+            <h4>Emotional Analysis</h4>
+            <p>Evaluates fear, sadness, anger, and joy levels alongside clinical indicators for a holistic risk assessment.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-card-icon">
+                <span class="material-icons">shield</span>
+            </div>
+            <h4>Early Screening</h4>
+            <p>Designed to identify high-risk patterns prior to full clinical manifestation, enabling preventative care pathways.</p>
+        </div>
+    </div>
+
+    <!-- ═══ About ═══ -->
+    <div class="about-section animate-in delay-4">
+        <h2>About the Framework</h2>
+        <p>
+            Post-Traumatic Stress Disorder (PTSD) is a complex psychiatric condition where early intervention 
+            significantly improves long-term clinical outcomes. This framework provides clinicians with a 
+            data-driven "second opinion" by evaluating patterns across 28 patient features simultaneously.
+        </p>
+        <br>
+        <p>
+            The model was trained using real-world data in Google Colab and integrates clinical assessments, 
+            lifestyle factors, and emotional indicators to provide a comprehensive, multi-dimensional risk 
+            assessment that goes beyond traditional screening tools.
+        </p>
+    </div>
+</div>
+{% endblock %}

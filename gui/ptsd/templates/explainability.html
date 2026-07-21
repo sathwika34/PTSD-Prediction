@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block title %}Model Explainability{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Model Explainability (SHAP)</h1>
+    <p>Understanding how the XGBoost model makes predictions using SHapley Additive exPlanations. 
+       Transparency is critical for clinical trust and medical ethics compliance.</p>
+</div>
+
+<div class="page-body">
+    <!-- Explanation Panel -->
+    <div class="shap-explanation-panel animate-in">
+        <p>
+            <strong>Patient ID: #SAMPLE</strong> — Current Risk Assessment Breakdown<br><br>
+            The model indicates risk levels based on screening data. Predictions are strongly driven by 
+            clinical symptom scores (PCL-5 subscales), followed by sleep quality and comorbidity indicators. 
+            Protective factors like therapy adherence and social support can significantly lower overall risk scores.
+        </p>
+    </div>
+
+    <!-- Global SHAP Summary Chart -->
+    <div class="card animate-in delay-1" style="margin-bottom:24px;">
+        <div class="card-header">
+            <h3>Global Feature Impact (Mean |SHAP|)</h3>
+            <span class="material-icons">bar_chart</span>
+        </div>
+        <div class="card-body">
+            <div class="chart-container">
+                <canvas id="globalShapChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Direction Grid -->
+    <div class="card animate-in delay-2" style="margin-bottom:24px;">
+        <div class="card-header">
+            <h3>Feature Directionality</h3>
+            <span class="material-icons">swap_horiz</span>
+        </div>
+        <div class="card-body">
+            <p style="font-size:13px;color:var(--on-surface-variant);margin-bottom:20px;">
+                Red bars push prediction toward PTSD. Blue/green bars push away from PTSD.
+            </p>
+            <div class="direction-grid" id="direction-grid">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Feature Importance (Tree-based) -->
+    <div class="card animate-in delay-3">
+        <div class="card-header">
+            <h3>Top Feature Importance (XGBoost Gain)</h3>
+            <span class="material-icons">leaderboard</span>
+        </div>
+        <div class="card-body">
+            <div class="chart-container">
+                <canvas id="featureImportanceChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const shapData = {{ shap_data | tojson }};
+    const featureImportance = {{ feature_importance | tojson }};
+
+    // ── Global SHAP Bar Chart ──
+    if (shapData && shapData.feature_names) {
+        const names = shapData.feature_names;
+        const meanShap = shapData.mean_abs_shap;
+
+        // Sort by mean_abs_shap
+        const sorted = names.map((n, i) => ({ name: n, value: meanShap[i] }))
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 15);
+
+        new Chart(document.getElementById('globalShapChart'), {
+            type: 'bar',
+            data: {
+                labels: sorted.map(d => d.name.replace(/_/g, ' ')),
+                datasets: [{
+                    label: 'Mean |SHAP value|',
+                    data: sorted.map(d => d.value),
+                    backgroundColor: sorted.map((d, i) => {
+                        const opacity = 0.4 + (0.6 * (1 - i / sorted.length));
+                        return `rgba(32, 99, 147, ${opacity})`;
+                    }),
+                    borderColor: 'rgba(32, 99, 147, 0.8)',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#022448',
+                        titleFont: { family: 'Inter', size: 12 },
+                        bodyFont: { family: 'Inter', size: 11 },
+                        padding: 12,
+                        cornerRadius: 8,
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(0,0,0,0.04)' },
+                        ticks: { font: { family: 'Inter', size: 11 } },
+                        title: { display: true, text: 'Mean |SHAP value|', font: { family: 'Inter', size: 12, weight: '600' } }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { font: { family: 'Inter', size: 12 } }
+                    }
+                }
+            }
+        });
+
+        // ── Directionality Grid ──
+        // Use SHAP sample to compute mean direction
+        if (shapData.shap_values_sample) {
+            const sampleShap = shapData.shap_values_sample;
+            const meanDirectional = names.map((n, i) => {
+                const vals = sampleShap.map(row => row[i]);
+                const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+                return { name: n, value: mean };
+            });
+
+            const riskFactors = meanDirectional.filter(d => d.value > 0).sort((a, b) => b.value - a.value).slice(0, 6);
+            const protectiveFactors = meanDirectional.filter(d => d.value <= 0).sort((a, b) => a.value - b.value).slice(0, 6);
+
+            const grid = document.getElementById('direction-grid');
+            grid.innerHTML = `
+                <div class="direction-col risk">
+                    <h4><span class="material-icons" style="font-size:18px;">trending_up</span> Increasing Risk</h4>
+                    ${riskFactors.map(f => `
+                        <div class="direction-item">
+                            <span class="direction-item-name">${f.name.replace(/_/g, ' ')}</span>
+                            <span class="direction-item-value positive">+${f.value.toFixed(4)}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="direction-col protective">
+                    <h4><span class="material-icons" style="font-size:18px;">trending_down</span> Decreasing Risk</h4>
+                    ${protectiveFactors.map(f => `
+                        <div class="direction-item">
+                            <span class="direction-item-name">${f.name.replace(/_/g, ' ')}</span>
+                            <span class="direction-item-value negative">${f.value.toFixed(4)}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+    }
+
+    // ── Feature Importance (Gain) ──
+    if (featureImportance && featureImportance.length) {
+        const sorted = [...featureImportance].sort((a, b) => b.importance - a.importance).slice(0, 12);
+
+        new Chart(document.getElementById('featureImportanceChart'), {
+            type: 'bar',
+            data: {
+                labels: sorted.map(d => d.feature.replace(/_/g, ' ')),
+                datasets: [{
+                    label: 'Feature Importance (Gain)',
+                    data: sorted.map(d => d.importance),
+                    backgroundColor: sorted.map((d, i) => {
+                        const hue = 200 + (i * 8);
+                        return `hsla(${hue}, 55%, 40%, 0.7)`;
+                    }),
+                    borderRadius: 4,
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#022448',
+                        padding: 12,
+                        cornerRadius: 8,
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(0,0,0,0.04)' },
+                        ticks: { font: { family: 'Inter', size: 11 } },
+                        title: { display: true, text: 'Importance Score', font: { family: 'Inter', size: 12, weight: '600' } }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { font: { family: 'Inter', size: 12 } }
+                    }
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,105 @@
+{
+  "total_samples": 2000,
+  "age_distribution": {
+    "mean": 46.4,
+    "std": 16.4,
+    "min": 18,
+    "max": 74,
+    "bins": [
+      214,
+      199,
+      159,
+      193,
+      196,
+      217,
+      232,
+      157,
+      219,
+      214
+    ],
+    "bin_edges": [
+      18.0,
+      23.6,
+      29.2,
+      34.8,
+      40.4,
+      46.0,
+      51.599999999999994,
+      57.199999999999996,
+      62.8,
+      68.4,
+      74.0
+    ]
+  },
+  "gender_distribution": {
+    "Female": 963,
+    "Male": 887,
+    "Non-Binary": 150
+  },
+  "trauma_type_distribution": {
+    "Combat": 364,
+    "Other": 338,
+    "Assault": 334,
+    "Natural_Disaster": 332,
+    "Childhood_Abuse": 318,
+    "Accident": 314
+  },
+  "employment_distribution": {
+    "Employed": 806,
+    "Unemployed": 516,
+    "Student": 370,
+    "Retired": 308
+  },
+  "lec5_distribution": {
+    "mean": 33.2,
+    "std": 19.6,
+    "bins": [
+      213,
+      207,
+      208,
+      173,
+      191,
+      204,
+      182,
+      230,
+      222,
+      170
+    ],
+    "bin_edges": [
+      0.0,
+      6.7,
+      13.4,
+      20.1,
+      26.8,
+      33.5,
+      40.2,
+      46.9,
+      53.6,
+      60.300000000000004,
+      67.0
+    ]
+  },
+  "class_distribution": {
+    "0": 1095,
+    "1": 905
+  },
+  "feature_correlations": {
+    "Intrusion_Score": 0.3980811040886207,
+    "Negative_Cognition_Score": 0.26527054373423303,
+    "Hyperarousal_Score": 0.25935029023659556,
+    "Avoidance_Score": 0.2160276755483619,
+    "Sleep_Quality": 0.1341053776854457,
+    "Depression_Score": 0.11101762565548305,
+    "Anxiety_Score": 0.09824800533717781,
+    "Prior_MH_Diagnosis": 0.09434696913080474,
+    "Alcohol_Use": 0.08687043515357508,
+    "Substance_Use": 0.06688148704387768,
+    "LEC5_Score": 0.04291296812633345,
+    "Time_Since_Trauma_Months": 0.030088094569852234,
+    "Num_Traumatic_Events": 0.025701619097117722,
+    "Age": 0.020618423745084446,
+    "Exercise_Frequency": -0.01087338334028298,
+    "Social_Support_Rating": -0.05860288393565182,
+    "Therapy_Adherence": -0.09753889306383216
+  }
+}

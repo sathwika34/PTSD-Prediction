@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+{% block title %}Dataset Analytics{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Dataset Analytics Dashboard</h1>
+    <p>Exploratory Data Analysis for the PTSD Clinical Research Dataset. 
+       Understanding data distributions is critical for model reliability and bias detection.</p>
+</div>
+
+<div class="page-body">
+    <!-- Summary Metrics -->
+    <div class="metrics-grid animate-in">
+        <div class="metric-card">
+            <div class="metric-card-label">Total Samples</div>
+            <div class="metric-card-value">{{ stats.get('total_samples', 0) | int }}</div>
+            <div class="metric-card-sub">Synthetic clinical records</div>
+        </div>
+        <div class="metric-card success">
+            <div class="metric-card-label">PTSD Positive</div>
+            <div class="metric-card-value secondary">
+                {% if stats.get('class_distribution') %}
+                    {{ stats.class_distribution.get('1', stats.class_distribution.get(1, 0)) }}
+                {% else %}0{% endif %}
+            </div>
+            <div class="metric-card-sub">Diagnosed cases</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-card-label">PTSD Negative</div>
+            <div class="metric-card-value">
+                {% if stats.get('class_distribution') %}
+                    {{ stats.class_distribution.get('0', stats.class_distribution.get(0, 0)) }}
+                {% else %}0{% endif %}
+            </div>
+            <div class="metric-card-sub">Control group</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-card-label">Features</div>
+            <div class="metric-card-value">{{ metrics.get('n_features', 21) }}</div>
+            <div class="metric-card-sub">Multimodal inputs</div>
+        </div>
+    </div>
+
+    <!-- Charts Row 1 -->
+    <div class="grid-2 animate-in delay-1" style="margin-bottom:24px;">
+        <!-- Class Distribution -->
+        <div class="card">
+            <div class="card-header">
+                <h3>Class Distribution</h3>
+                <span class="material-icons">pie_chart</span>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height:300px;">
+                    <canvas id="classDistChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Age Demographics -->
+        <div class="card">
+            <div class="card-header">
+                <h3>Age Demographics</h3>
+                <span class="material-icons">groups</span>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height:300px;">
+                    <canvas id="ageChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 2 -->
+    <div class="grid-2 animate-in delay-2" style="margin-bottom:24px;">
+        <!-- Trauma Severity -->
+        <div class="card">
+            <div class="card-header">
+                <h3>Trauma Severity (LEC-5)</h3>
+                <span class="material-icons">psychology</span>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height:300px;">
+                    <canvas id="lec5Chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trauma Type Distribution -->
+        <div class="card">
+            <div class="card-header">
+                <h3>Trauma Type Distribution</h3>
+                <span class="material-icons">category</span>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height:300px;">
+                    <canvas id="traumaTypeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feature Correlations -->
+    <div class="card animate-in delay-3" style="margin-bottom:24px;">
+        <div class="card-header">
+            <h3>Feature Correlation with PTSD Diagnosis</h3>
+            <span class="material-icons">insights</span>
+        </div>
+        <div class="card-body">
+            <div class="chart-container" style="height:400px;">
+                <canvas id="correlationChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gender & Employment -->
+    <div class="grid-2 animate-in delay-4">
+        <div class="card">
+            <div class="card-header">
+                <h3>Gender Distribution</h3>
+                <span class="material-icons">wc</span>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height:280px;">
+                    <canvas id="genderChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <h3>Employment Status</h3>
+                <span class="material-icons">work</span>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height:280px;">
+                    <canvas id="employmentChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const stats = {{ stats | tojson }};
+
+    const chartColors = {
+        primary: '#1E3A5F',
+        secondary: '#206393',
+        accent: '#4682B4',
+        success: '#2e7d32',
+        warning: '#f57c00',
+        error: '#c62828',
+        palette: ['#1E3A5F', '#206393', '#4682B4', '#5a9bd5', '#90c9ff', '#adc8f5'],
+        paletteSoft: [
+            'rgba(30,58,95,0.7)', 'rgba(32,99,147,0.7)', 'rgba(70,130,180,0.7)',
+            'rgba(90,155,213,0.7)', 'rgba(144,201,255,0.7)', 'rgba(173,200,245,0.7)'
+        ]
+    };
+
+    const defaultOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { labels: { font: { family: 'Inter', size: 12 }, padding: 16 } },
+            tooltip: {
+                backgroundColor: '#022448',
+                titleFont: { family: 'Inter', size: 12 },
+                bodyFont: { family: 'Inter', size: 11 },
+                padding: 12,
+                cornerRadius: 8,
+            }
+        }
+    };
+
+    // ── Class Distribution (Doughnut) ──
+    if (stats.class_distribution) {
+        const labels = Object.keys(stats.class_distribution).map(k => k === '0' || k === 0 ? 'No PTSD' : 'PTSD');
+        const values = Object.values(stats.class_distribution);
+
+        new Chart(document.getElementById('classDistChart'), {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: ['#206393', '#c62828'],
+                    borderWidth: 3,
+                    borderColor: '#ffffff',
+                    hoverOffset: 8,
+                }]
+            },
+            options: {
+                ...defaultOptions,
+                cutout: '60%',
+                plugins: {
+                    ...defaultOptions.plugins,
+                    legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 13 }, padding: 20 } }
+                }
+            }
+        });
+    }
+
+    // ── Age Demographics (Histogram) ──
+    if (stats.age_distribution) {
+        const bins = stats.age_distribution.bins;
+        const edges = stats.age_distribution.bin_edges;
+        const labels = edges.slice(0, -1).map((e, i) => `${Math.round(e)}-${Math.round(edges[i + 1])}`);
+
+        new Chart(document.getElementById('ageChart'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Count',
+                    data: bins,
+                    backgroundColor: 'rgba(32, 99, 147, 0.6)',
+                    borderColor: 'rgba(32, 99, 147, 0.9)',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                }]
+            },
+            options: {
+                ...defaultOptions,
+                plugins: { ...defaultOptions.plugins, legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 11 } } },
+                    y: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { family: 'Inter', size: 11 } },
+                         title: { display: true, text: 'Count', font: { family: 'Inter', size: 12 } } }
+                }
+            }
+        });
+    }
+
+    // ── LEC-5 Distribution ──
+    if (stats.lec5_distribution) {
+        const bins = stats.lec5_distribution.bins;
+        const edges = stats.lec5_distribution.bin_edges;
+        const labels = edges.slice(0, -1).map((e, i) => `${Math.round(e)}-${Math.round(edges[i + 1])}`);
+
+        new Chart(document.getElementById('lec5Chart'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Count',
+                    data: bins,
+                    backgroundColor: bins.map((_, i) => {
+                        const pct = i / bins.length;
+                        if (pct < 0.3) return 'rgba(46, 125, 50, 0.6)';
+                        if (pct < 0.7) return 'rgba(245, 124, 0, 0.6)';
+                        return 'rgba(198, 40, 40, 0.6)';
+                    }),
+                    borderRadius: 4,
+                }]
+            },
+            options: {
+                ...defaultOptions,
+                plugins: { ...defaultOptions.plugins, legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 11 } },
+                         title: { display: true, text: 'LEC-5 Score Range', font: { family: 'Inter', size: 12 } } },
+                    y: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { family: 'Inter', size: 11 } } }
+                }
+            }
+        });
+    }
+
+    // ── Trauma Type (Horizontal Bar) ──
+    if (stats.trauma_type_distribution) {
+        const sorted = Object.entries(stats.trauma_type_distribution).sort((a, b) => b[1] - a[1]);
+
+        new Chart(document.getElementById('traumaTypeChart'), {
+            type: 'bar',
+            data: {
+                labels: sorted.map(d => d[0].replace(/_/g, ' ')),
+                datasets: [{
+                    label: 'Count',
+                    data: sorted.map(d => d[1]),
+                    backgroundColor: chartColors.paletteSoft,
+                    borderRadius: 4,
+                }]
+            },
+            options: {
+                ...defaultOptions,
+                indexAxis: 'y',
+                plugins: { ...defaultOptions.plugins, legend: { display: false } },
+                scales: {
+                    x: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { family: 'Inter', size: 11 } } },
+                    y: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 12 } } }
+                }
+            }
+        });
+    }
+
+    // ── Feature Correlations ──
+    if (stats.feature_correlations) {
+        const sorted = Object.entries(stats.feature_correlations).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+
+        new Chart(document.getElementById('correlationChart'), {
+            type: 'bar',
+            data: {
+                labels: sorted.map(d => d[0].replace(/_/g, ' ')),
+                datasets: [{
+                    label: 'Correlation with PTSD Diagnosis',
+                    data: sorted.map(d => d[1]),
+                    backgroundColor: sorted.map(d => d[1] > 0 ? 'rgba(198, 40, 40, 0.6)' : 'rgba(46, 125, 50, 0.6)'),
+                    borderColor: sorted.map(d => d[1] > 0 ? 'rgba(198, 40, 40, 0.9)' : 'rgba(46, 125, 50, 0.9)'),
+                    borderWidth: 1,
+                    borderRadius: 4,
+                }]
+            },
+            options: {
+                ...defaultOptions,
+                indexAxis: 'y',
+                plugins: { ...defaultOptions.plugins, legend: { display: false } },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(0,0,0,0.04)' },
+                        ticks: { font: { family: 'Inter', size: 11 } },
+                        title: { display: true, text: 'Pearson Correlation', font: { family: 'Inter', size: 12, weight: '600' } }
+                    },
+                    y: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 11 } } }
+                }
+            }
+        });
+    }
+
+    // ── Gender Distribution (Doughnut) ──
+    if (stats.gender_distribution) {
+        new Chart(document.getElementById('genderChart'), {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(stats.gender_distribution),
+                datasets: [{
+                    data: Object.values(stats.gender_distribution),
+                    backgroundColor: ['#1E3A5F', '#206393', '#90c9ff'],
+                    borderWidth: 3,
+                    borderColor: '#ffffff',
+                    hoverOffset: 6,
+                }]
+            },
+            options: {
+                ...defaultOptions,
+                cutout: '55%',
+                plugins: {
+                    ...defaultOptions.plugins,
+                    legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 12 }, padding: 16 } }
+                }
+            }
+        });
+    }
+
+    // ── Employment (Doughnut) ──
+    if (stats.employment_distribution) {
+        new Chart(document.getElementById('employmentChart'), {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(stats.employment_distribution),
+                datasets: [{
+                    data: Object.values(stats.employment_distribution),
+                    backgroundColor: ['#1E3A5F', '#206393', '#4682B4', '#90c9ff'],
+                    borderWidth: 3,
+                    borderColor: '#ffffff',
+                    hoverOffset: 6,
+                }]
+            },
+            options: {
+                ...defaultOptions,
+                cutout: '55%',
+                plugins: {
+                    ...defaultOptions.plugins,
+                    legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 12 }, padding: 16 } }
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}
